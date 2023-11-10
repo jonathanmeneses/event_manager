@@ -1,6 +1,8 @@
 require 'csv'
 require 'google/apis/civicinfo_v2'
 require 'erb'
+require 'date'
+require 'time'
 
 
 
@@ -36,10 +38,6 @@ def save_thank_you_letter(id,form_letter)
 end
 
 def clean_phone_number(phonenumber)
-  # <10 digits = bad
-  # 11 digits and first dig is 1 --> good
-  # 11 digits and first dig != 1 --> bad
-  # >11 digits = Bad
   stripped_number = phonenumber.gsub(/\D/, '')
   if stripped_number.length == 10
     return stripped_number
@@ -49,6 +47,10 @@ def clean_phone_number(phonenumber)
     return nil
   end
 
+end
+
+def parse_date(regdate)
+  DateTime.strptime(regdate, '%m/%d/%y %H:%M').to_time
 end
 
 puts 'EventManager initialized.'
@@ -63,20 +65,42 @@ contents = CSV.open(
 template_letter = File.read('form_letter.erb')
 erb_template = ERB.new template_letter
 
-contents.each do |row|
-  id = row[0]
-  name = row[:first_name]
+# contents.each do |row|
+#   id = row[0]
+#   name = row[:first_name]
 
-  zipcode = clean_zipcode(row[:zipcode])
+#   zipcode = clean_zipcode(row[:zipcode])
 
-  phonenumber = clean_phone_number(row[:homephone])
-  p phonenumber
+#   phonenumber = clean_phone_number(row[:homephone])
 
-  legislators = legislators_by_zipcode(zipcode)
+#   legislators = legislators_by_zipcode(zipcode)
 
-  form_letter = erb_template.result(binding)
+#   form_letter = erb_template.result(binding)
 
-  save_thank_you_letter(id,form_letter)
+#   save_thank_you_letter(id,form_letter)
 
 
+# end
+
+
+contents.rewind
+week_distribution = contents.map do |row|
+  datetime = parse_date(row[:regdate]).wday
+  # hour = datetime.hour
+  #signup_hours.append(row[:regdate].hour)
 end
+
+contents.rewind
+hour_distribution = contents.map do |row|
+  datetime = parse_date(row[:regdate]).hour
+  # hour = datetime.hour
+  #signup_hours.append(row[:regdate].hour)
+end
+
+
+
+week_sorting = week_distribution.tally.sort_by { |key, value| -value}.to_h
+hour_sorting = hour_distribution.tally.sort_by { |key, value| -value}.to_h
+
+p week_sorting
+p hour_sorting
